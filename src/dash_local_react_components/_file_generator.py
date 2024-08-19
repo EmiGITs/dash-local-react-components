@@ -3,11 +3,15 @@ from dash import Dash  # type: ignore
 from dash.development.base_component import Component  # type: ignore
 from dash_local_react_components._common import import_namespace
 from dash_local_react_components._types import ComponentKey
+from dash_local_react_components._config import config
 
 
 def _generate_component_import_file(public_path: str, file_path: str, export_name: str, component_name: str) -> str:
+    relative_import_levels = config.import_files_root_path.count('/') - 1
+    relative_public_path = '../' * relative_import_levels + public_path
+
     return f'''
-        import {{{export_name} as {component_name}}} from "./{public_path}/{file_path}";
+        import {{{export_name} as {component_name}}} from "./{relative_public_path}/{file_path}";
         {import_namespace}["{component_name}"] = {component_name}
     '''
 

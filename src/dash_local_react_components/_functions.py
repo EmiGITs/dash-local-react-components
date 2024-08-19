@@ -2,9 +2,8 @@ from typing import Any, Dict, Set, Type
 from dash import Dash  # type: ignore
 from dash.development.base_component import Component  # type: ignore
 from urllib import parse
-from flask import abort, send_from_directory, send_file
-import uuid
-import os
+from flask import send_from_directory
+from dash_local_react_components._config import config
 from dash_local_react_components._common import import_file_name, import_namespace, react_file_name
 from dash_local_react_components._file_generator import generate_import_file, generate_react_file
 from dash_local_react_components._types import AppKey, ComponentKey, LibraryKey
@@ -16,6 +15,9 @@ _initialized_components: Dict[ComponentKey, Type[Component]] = dict()
 
 
 def _initialize_app(app: Dash) -> None:
+    import_file_path = f'{config.import_files_root_path}{import_file_name}'
+    react_file_path = f'{config.import_files_root_path}{react_file_name}'
+
     app.renderer = f'''
         window.__start_dash_app__ = () => new DashRenderer();
 
@@ -25,25 +27,25 @@ def _initialize_app(app: Dash) -> None:
 
     app.config.external_scripts += [f'''
         "></script>
-        <script type="importmap">{{ "imports": {{ "react": "{react_file_name}" }} }}</script>
+        <script type="importmap">{{ "imports": {{ "react": "{react_file_path}" }} }}</script>
         <script src="
     ''']
 
-    @app.server.route(import_file_name)
+    @app.server.route(import_file_path)
     def get_import_file() -> Any:
         return app.server.response_class(
             response=generate_import_file(app, _initialized_components),
             status=200,
             mimetype='application/javascript')
 
-    @app.server.route(react_file_name)
+    @app.server.route(react_file_path)
     def get_react_file() -> Any:
         return app.server.response_class(
             response=generate_react_file(),
             status=200,
             mimetype='application/javascript')
 
-    app.config.external_scripts += [{'src': import_file_name, 'type': 'module', 'async': 'false', 'defer': 'false'}]
+    app.config.external_scripts += [{'src': import_file_path, 'type': 'module', 'async': 'false', 'defer': 'false'}]
 
 
 def _initialize_library(app: Dash, public_path: str) -> None:
@@ -58,9 +60,10 @@ def _initialize_library(app: Dash, public_path: str) -> None:
             mimetype='application/javascript' if path.endswith('.js') else None)
 
 
-def _create_component() -> Type[Component]:
+def _create_component(component_key) -> Type[Component]:
     class LocalReactComponent(Component):
-        unique_name = 'c' + uuid.uuid4().hex
+        unique_name = f'f_{component_key.public_path}_{component_key.file_path}_{component_key.export_name}'
+        unique_name = ''.join(c if c.isalnum() else '_' for c in unique_name)
 
         def __init__(self, **kwargs: Any) -> None:
             self._prop_names = kwargs.keys()
@@ -87,7 +90,7 @@ def load_react_component(app: Dash, public_path: str, file_path: str, export_nam
         _initialized_libraries.add(library_key)
 
     if component_key not in _initialized_components:
-        component = _create_component()
+        component = _create_component(component_key)
         _initialized_components[component_key] = component
 
     return _initialized_components[component_key]
