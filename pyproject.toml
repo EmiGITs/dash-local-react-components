@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dash-local-react-components"
-version = "1.4.0"
+version = "1.4.1"
 authors = [
     { name="Tomasz Rewak", email="tomasz.rewak@gmail.com" },
 ]
@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    'dash >= 2.6.0, < 3',
+    'dash >= 2.6.0, < 4',
 ]
 
 [tool.setuptools.packages.find]
